@@ -1,0 +1,10 @@
+[package]
+name = "globalmaptiles-rs"
+version = "0.1.0"
+authors = ["Zero <nick@zero.dev>"]
+license = "MIT"
+description = "Convert a raster into TMS tiles, create KML SuperOverlay EPSG:4326, generate a simple HTML viewers based on Google Maps and OpenLayers. Ported from globalmaptiles.py"
+repository = "http://github.com/ZeroErrors/globalmaptiles-rs"
+edition = "2018"
+
+[dependencies]
