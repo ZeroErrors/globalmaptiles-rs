@@ -24,6 +24,10 @@ impl GlobalMercator {
         }
     }
 
+    pub fn tile_size(&self) -> u32 {
+        self.tile_size
+    }
+
     pub fn lat_lon_to_meters(&self, lat: f64, lon: f64) -> (f64, f64) {
         // "Converts given lat/lon in WGS84 Datum to XY in Spherical Mercator EPSG:900913"
 
