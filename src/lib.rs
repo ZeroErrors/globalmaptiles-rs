@@ -33,7 +33,7 @@ impl GlobalMercator {
         // "Converts given lat/lon in WGS84 Datum to XY in Spherical Mercator EPSG:900913"
 
         let mx = lon * self.origin_shift / 180.0;
-        let my = f64::log2(f64::tan((90.0 + lat) * PI / 360.0)) / (PI / 180.0);
+        let my = f64::ln(f64::tan((90.0 + lat) * PI / 360.0)) / (PI / 180.0);
 
         let my = my * self.origin_shift / 180.0;
         return (mx, my);
@@ -111,7 +111,7 @@ impl GlobalMercator {
         // "resolution (meters/pixel) for given zoom level (measured at Equator)"
 
         // return (2 * PI * 6378137) / (self.tile_size * 2**zoom)
-        return self.initial_resolution / (f64::powi(2.0, zoom as i32));
+        return self.initial_resolution / f64::powi(2.0, zoom as i32);
     }
 
     pub fn zoom_for_pixel_size(&self, pixel_size: f64) -> u32 {
@@ -160,3 +160,61 @@ impl GlobalMercator {
 
 // TODO: Implement GlobalGeodetic
 // TODO: Add tests
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const EPSILON_SCALE: f64 = 7_000_000.0; // TODO: This precision sucks
+
+    #[test]
+    fn test_default() {
+        assert_eq!(GlobalMercator::default().tile_size, 256);
+    }
+
+    #[test]
+    fn test_new() {
+        assert_eq!(GlobalMercator::new(256).tile_size, 256);
+    }
+
+    #[test]
+    fn test_lat_lon_meters() {
+        let mercator = GlobalMercator::default();
+        let (lat, lon) = (3.2, 4.22);
+
+        let (mx, my) = mercator.lat_lon_to_meters(lat, lon);
+        let (lat_new, lon_new) = mercator.meters_to_lat_lon(mx, my);
+
+
+        assert!((lat - lat_new).abs() < std::f64::EPSILON * EPSILON_SCALE, "failed to compare: {} != {}, (lat - lat_new).abs() = {}, std::f64::EPSILON = {}", lat, lat_new, (lat - lat_new).abs(), std::f64::EPSILON * EPSILON_SCALE);
+        assert!((lon - lon_new).abs() < std::f64::EPSILON * EPSILON_SCALE, "failed to compare: {} != {}, (lon - lon_new).abs() = {}, std::f64::EPSILON = {}", lon, lon_new, (lon - lon_new).abs(), std::f64::EPSILON * EPSILON_SCALE);
+    }
+
+    #[test]
+    fn test_meters_pixels() {
+        let mercator = GlobalMercator::default();
+        let (mx, my) = (31100.00, 42200.1);
+        let zoom = 8;
+
+        let (px, py) = mercator.meters_to_pixels(mx, my, zoom);
+        let (mx_new, my_new) = mercator.pixels_to_meters(px, py, zoom);
+
+        assert!((mx - mx_new).abs() < std::f64::EPSILON * EPSILON_SCALE, "failed to compare: {} != {}, (mx - mx_new).abs() = {}, std::f64::EPSILON = {}", mx, mx_new, (mx - mx_new).abs() , std::f64::EPSILON * EPSILON_SCALE);
+        assert!((my - my_new).abs() < std::f64::EPSILON * EPSILON_SCALE, "failed to compare: {} != {}, (my - my_new).abs() = {}, std::f64::EPSILON = {}", my, my_new, (my - my_new).abs(), std::f64::EPSILON * EPSILON_SCALE);
+    }
+
+    // TODO: pixels_to_tile is wrong, it should be using 'floor' not 'ceil' - 1 because of we are on the min edge the divide is exact so -1 puts us in the wrong tile
+//    #[test]
+//    fn test_pixels_tile() {
+//        let mercator = GlobalMercator::default();
+//        let (px, py) = (0.0, 0.0);
+//        let zoom = 8;
+//
+//        let (tx, ty) = mercator.pixels_to_tile(px, py);
+//        let tile_size = mercator.tile_size();
+//        let (px_new, py_new) = ((tx * tile_size as i32) as f64, (ty * tile_size as i32) as f64);
+//
+//        assert_eq!(px, px_new);
+//        assert_eq!(py, py_new);
+//    }
+}
