@@ -1,6 +1,6 @@
 use std::f64::consts::PI;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct GlobalMercator {
     tile_size: u32,
     initial_resolution: f64,
