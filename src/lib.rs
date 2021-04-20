@@ -92,8 +92,16 @@ impl GlobalMercator {
     pub fn tile_bounds(&self, tx: i32, ty: i32, zoom: u32) -> (f64, f64, f64, f64) {
         // "Returns bounds of the given tile in EPSG:900913 coordinates"
 
-        let (minx, miny) = self.pixels_to_meters((tx * self.tile_size as i32) as f64, (ty * self.tile_size as i32) as f64, zoom);
-        let (maxx, maxy) = self.pixels_to_meters(((tx + 1) * self.tile_size as i32) as f64, ((ty + 1) * self.tile_size as i32) as f64, zoom);
+        let (minx, miny) = self.pixels_to_meters(
+            (tx * self.tile_size as i32) as f64,
+            (ty * self.tile_size as i32) as f64,
+            zoom,
+        );
+        let (maxx, maxy) = self.pixels_to_meters(
+            ((tx + 1) * self.tile_size as i32) as f64,
+            ((ty + 1) * self.tile_size as i32) as f64,
+            zoom,
+        );
         return (minx, miny, maxx, maxy);
     }
 
@@ -142,7 +150,7 @@ impl GlobalMercator {
 
         let mut quad_key = String::new();
         let ty = (f64::powi(2.0, zoom as i32) - 1.0) as i32 - ty;
-        for i in (0..zoom as i32).rev() {
+        for i in (1..(zoom + 1) as i32).rev() {
             let mut digit = 0;
             let mask = 1 << (i - 1);
             if (tx & mask) != 0 {
@@ -158,14 +166,11 @@ impl GlobalMercator {
     }
 }
 
-// TODO: Implement GlobalGeodetic
-// TODO: Add tests
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    const EPSILON_SCALE: f64 = 7_000_000.0; // TODO: This precision sucks
+    const EPSILON_SCALE: f64 = 7_000_000.0;
 
     #[test]
     fn test_default() {
@@ -185,9 +190,22 @@ mod tests {
         let (mx, my) = mercator.lat_lon_to_meters(lat, lon);
         let (lat_new, lon_new) = mercator.meters_to_lat_lon(mx, my);
 
-
-        assert!((lat - lat_new).abs() < std::f64::EPSILON * EPSILON_SCALE, "failed to compare: {} != {}, (lat - lat_new).abs() = {}, std::f64::EPSILON = {}", lat, lat_new, (lat - lat_new).abs(), std::f64::EPSILON * EPSILON_SCALE);
-        assert!((lon - lon_new).abs() < std::f64::EPSILON * EPSILON_SCALE, "failed to compare: {} != {}, (lon - lon_new).abs() = {}, std::f64::EPSILON = {}", lon, lon_new, (lon - lon_new).abs(), std::f64::EPSILON * EPSILON_SCALE);
+        assert!(
+            (lat - lat_new).abs() < std::f64::EPSILON * EPSILON_SCALE,
+            "failed to compare: {} != {}, (lat - lat_new).abs() = {}, std::f64::EPSILON = {}",
+            lat,
+            lat_new,
+            (lat - lat_new).abs(),
+            std::f64::EPSILON * EPSILON_SCALE
+        );
+        assert!(
+            (lon - lon_new).abs() < std::f64::EPSILON * EPSILON_SCALE,
+            "failed to compare: {} != {}, (lon - lon_new).abs() = {}, std::f64::EPSILON = {}",
+            lon,
+            lon_new,
+            (lon - lon_new).abs(),
+            std::f64::EPSILON * EPSILON_SCALE
+        );
     }
 
     #[test]
@@ -199,22 +217,66 @@ mod tests {
         let (px, py) = mercator.meters_to_pixels(mx, my, zoom);
         let (mx_new, my_new) = mercator.pixels_to_meters(px, py, zoom);
 
-        assert!((mx - mx_new).abs() < std::f64::EPSILON * EPSILON_SCALE, "failed to compare: {} != {}, (mx - mx_new).abs() = {}, std::f64::EPSILON = {}", mx, mx_new, (mx - mx_new).abs() , std::f64::EPSILON * EPSILON_SCALE);
-        assert!((my - my_new).abs() < std::f64::EPSILON * EPSILON_SCALE, "failed to compare: {} != {}, (my - my_new).abs() = {}, std::f64::EPSILON = {}", my, my_new, (my - my_new).abs(), std::f64::EPSILON * EPSILON_SCALE);
+        assert!(
+            (mx - mx_new).abs() < std::f64::EPSILON * EPSILON_SCALE,
+            "failed to compare: {} != {}, (mx - mx_new).abs() = {}, std::f64::EPSILON = {}",
+            mx,
+            mx_new,
+            (mx - mx_new).abs(),
+            std::f64::EPSILON * EPSILON_SCALE
+        );
+        assert!(
+            (my - my_new).abs() < std::f64::EPSILON * EPSILON_SCALE,
+            "failed to compare: {} != {}, (my - my_new).abs() = {}, std::f64::EPSILON = {}",
+            my,
+            my_new,
+            (my - my_new).abs(),
+            std::f64::EPSILON * EPSILON_SCALE
+        );
     }
 
-    // TODO: pixels_to_tile is wrong, it should be using 'floor' not 'ceil' - 1 because of we are on the min edge the divide is exact so -1 puts us in the wrong tile
-//    #[test]
-//    fn test_pixels_tile() {
-//        let mercator = GlobalMercator::default();
-//        let (px, py) = (0.0, 0.0);
-//        let zoom = 8;
-//
-//        let (tx, ty) = mercator.pixels_to_tile(px, py);
-//        let tile_size = mercator.tile_size();
-//        let (px_new, py_new) = ((tx * tile_size as i32) as f64, (ty * tile_size as i32) as f64);
-//
-//        assert_eq!(px, px_new);
-//        assert_eq!(py, py_new);
-//    }
+    #[test]
+    fn test_quad_tree() {
+        let mercator = GlobalMercator::default();
+        let (lat, lon) = (48.6263556, 2.2492123);
+        let (mx, my) = mercator.lat_lon_to_meters(lat, lon);
+        let zoom = 12;
+        let (tx, ty) = mercator.meters_to_tile(mx, my, zoom);
+        let quadtree = mercator.quad_tree(tx, ty, zoom);
+        assert_eq!(quadtree, "120220011203");
+    }
+
+    #[test]
+    fn test_origin_quad_tree() {
+        let mercator = GlobalMercator::default();
+        let (lat, lon) = (0.0, 0.0);
+        let (mx, my) = mercator.lat_lon_to_meters(lat, lon);
+        let zoom = 12;
+        let (tx, ty) = mercator.meters_to_tile(mx, my, zoom);
+        let quadtree = mercator.quad_tree(tx, ty, zoom);
+        // FIXME it may be 000000000000, and not 211111111111 (so lat -0.04/ lon -0.04)
+        assert_eq!(quadtree, "211111111111");
+    }
+
+    #[test]
+    fn test_zero_quad_tree() {
+        let mercator = GlobalMercator::default();
+        let (lat, lon) = (8.3689428, -14.3165555);
+        let (mx, my) = mercator.lat_lon_to_meters(lat, lon);
+        let zoom = 12;
+        let (tx, ty) = mercator.meters_to_tile(mx, my, zoom);
+        let quadtree = mercator.quad_tree(tx, ty, zoom);
+        assert_eq!(quadtree, "033321211101");
+    }
+
+    #[test]
+    fn test_high_zoom_quad_tree() {
+        let mercator = GlobalMercator::default();
+        let (lat, lon) = (48.6263556, 2.2492123);
+        let (mx, my) = mercator.lat_lon_to_meters(lat, lon);
+        let zoom = 24;
+        let (tx, ty) = mercator.meters_to_tile(mx, my, zoom);
+        let quadtree = mercator.quad_tree(tx, ty, zoom);
+        assert_eq!(quadtree, "120220011203100323112320");
+    }
 }
