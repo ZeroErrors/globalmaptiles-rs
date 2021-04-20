@@ -1,14 +1,20 @@
 [package]
-name = "globalmaptiles-rs"
-version = "0.1.6"
-authors = ["Zero <nick@zero.dev>"]
+name = "globalmaptile"
+version = "0.1.7"
+authors = ["Zero <nick@zero.dev>",
+    "Frédéric Gardes <frederic.gardes@orange.com>"]
 license = "MIT"
 description = "Convert a raster into TMS tiles, create KML SuperOverlay EPSG:4326, generate a simple HTML viewers based on Google Maps and OpenLayers. Ported from globalmaptiles.py"
+homepage = "https://github.com/tigroo31/globalmaptile"
+documentation = "https://docs.rs/globalmaptile"
+repository = "https://github.com/tigroo31/globalmaptile.git"
+readme = "README.md"
 keywords = ["gis", "geo", "geography", "geospatial", "WGS84"]
-repository = "http://github.com/ZeroErrors/globalmaptiles-rs"
+categories = ["data-structures", "parsing"]
 edition = "2018"
 
 [lib]
-name = "globalmaptiles"
+name = "globalmaptile"
 
 [dependencies]
+log = "0.4"
